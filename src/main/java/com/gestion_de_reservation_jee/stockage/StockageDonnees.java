@@ -12,6 +12,6 @@ public class StockageDonnees {
     public static Map<String, Salle> salles = new HashMap<>();
     public static Map<String, Reservation> reservations = new HashMap<>();
     static {
-        users.put("admin", new User("admin", "admin", "ADMIN", "", "admin@center.com"));
+        users.put("admin", new User("admin1","admin", "admin", "admin", "", "admin@center.com"));
     }
 }
