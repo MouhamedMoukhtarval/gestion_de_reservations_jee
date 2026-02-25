@@ -57,7 +57,7 @@ public class AdminController {
         StockageDonnees.users.remove(username);
     	reponse.put("Message", "L'utilisateur a été suprimé");
 
-        return Response.ok().build();
+        return Response.ok(reponse).build();
     }
 
 

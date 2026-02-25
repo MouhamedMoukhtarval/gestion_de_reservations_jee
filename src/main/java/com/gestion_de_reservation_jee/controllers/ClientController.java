@@ -21,7 +21,10 @@ import com.gestion_de_reservation_jee.stockage.StockageDonnees;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class ClientController {
-
+	
+	private Map<String, Object> reponse = new HashMap<>();
+	
+	
     private boolean estClientAuthentifie(String nomUtilisateur, String motDePasse) {
         User user = StockageDonnees.users.get(nomUtilisateur);
         return user != null && user.getPassword().equals(motDePasse) && user.getRole().equals("client");
@@ -36,43 +39,52 @@ public class ClientController {
 
 	@POST
     @Path("/reserver")
-    public Response creerReservation(@HeaderParam("utilisateur") String nomUtilisateur, @HeaderParam("motDePasse") String motDePasse, Reservation requete) {
+    public Response creerReservation(@HeaderParam("utilisateur") String nomUtilisateur, @HeaderParam("motDePasse") String motDePasse, Reservation reservation) {
     	if (!estClientAuthentifie(nomUtilisateur, motDePasse)) {
-            return Response.status(Response.Status.UNAUTHORIZED).build();
+    		reponse.put("Message", "Acces non autorisee, veuillez authentifiez!");
+            return Response.status(Response.Status.UNAUTHORIZED).entity(reponse).build();
         }
 
-        Salle salle = StockageDonnees.salles.get(requete.getSalleId());
+        Salle salle = StockageDonnees.salles.get(reservation.getSalleId());
         if (salle == null) {
+        	reponse.put("Message", "Salle n'existent pas, essayez reservez une salle existant!");
             return Response.status(Response.Status.NOT_FOUND).build();
         }
 
-        if (!LogiqueReservation.estDureeValide(requete.getDureeHeurs())) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("Testing duree").build();
+        if (!LogiqueReservation.estDureeValide(reservation.getDureeHeurs())) {
+        	reponse.put("Message", "Le duree n'est pas valide!");
+            return Response.status(Response.Status.BAD_REQUEST).entity(reponse).build();
         }
 
-        if (requete.getDateDebut().isBefore(LocalDateTime.now())) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
+        if (reservation.getDateDebut().isAfter(LocalDateTime.now())) {
+        	
+        	reponse.put("Message", "Le reservation devrait avoir lieu apres maintenant!.");
+            return Response.status(Response.Status.BAD_REQUEST).entity(reponse).build();
         }
 
-        if (!LogiqueReservation.estSalleDisponible(requete.getSalleId(), requete.getDateDebut(), requete.getDureeHeurs())) {
-            return Response.status(Response.Status.CONFLICT).build();
+        if (!LogiqueReservation.estSalleDisponible(reservation.getSalleId(), reservation.getDateDebut(), reservation.getDureeHeurs())) {
+        	reponse.put("Message", "La salle indisponible!");
+            return Response.status(Response.Status.CONFLICT).entity(reponse).build();
         }
 
-        double total = salle.getPrixParHeur() * requete.getDureeHeurs();
-        requete.setId(UUID.randomUUID().toString().substring(0, 5));
-        requete.setNomClient(nomUtilisateur);
-        requete.setCoutTotal(total);
-        requete.setStatus("en_attente");
+        double total = salle.getPrixParHeur() * reservation.getDureeHeurs();
+        reservation.setId(UUID.randomUUID().toString().substring(0, 5));
+        reservation.setNomClient(nomUtilisateur);
+        reservation.setCoutTotal(total);
+        reservation.setStatus("en_attente");
 
-        StockageDonnees.reservations.put(requete.getId(), requete);
-        return Response.status(Response.Status.CREATED).entity(requete).build();
+        StockageDonnees.reservations.put(reservation.getId(), reservation);
+        reponse.put("Message", "Reservation cree avec succee");
+        reponse.put("Reservation",reservation);
+        return Response.status(Response.Status.CREATED).entity(reponse).build();
     }
 
     @GET
     @Path("/mes-reservations")
     public Response consulterHistorique(@HeaderParam("utilisateur") String nomUtilisateur, @HeaderParam("motDePasse") String motDePasse) {
-        if (!estClientAuthentifie(nomUtilisateur, motDePasse)) {
-            return Response.status(Response.Status.UNAUTHORIZED).build();
+    	if (!estClientAuthentifie(nomUtilisateur, motDePasse)) {
+    		reponse.put("Message", "Acces non autorisee, veuillez authentifiez!");
+            return Response.status(Response.Status.UNAUTHORIZED).entity(reponse).build();
         }
         
         List<Reservation> mesReservations = new ArrayList<>();
@@ -87,22 +99,24 @@ public class ClientController {
     @PUT
     @Path("/annuler/{id}")
     public Response annulerReservation(@HeaderParam("utilisateur") String nomUtilisateur, @HeaderParam("motDePasse") String motDePasse, @PathParam("id") String id) {
-        if (!estClientAuthentifie(nomUtilisateur, motDePasse)) {
-            return Response.status(Response.Status.UNAUTHORIZED).build();
+    	if (!estClientAuthentifie(nomUtilisateur, motDePasse)) {
+    		reponse.put("Message", "Acces non autorisee, veuillez authentifiez!");
+            return Response.status(Response.Status.UNAUTHORIZED).entity(reponse).build();
         }
 
-        Reservation res = StockageDonnees.reservations.get(id);
-        if (res == null || !res.getNomClient().equals(nomUtilisateur)) {
-            return Response.status(Response.Status.NOT_FOUND).build();
+        Reservation reservation = StockageDonnees.reservations.get(id);
+        if (reservation == null || !reservation.getNomClient().equals(nomUtilisateur)) {
+        	reponse.put("Message", "L'annulation est impossible, la reservation n'existe pas");
+            return Response.status(Response.Status.NOT_FOUND).entity(reponse).build();
         }
 
-        if (!LogiqueReservation.peutAnnuler(res.getDateDebut())) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
+        if (!LogiqueReservation.peutAnnuler(reservation.getDateDebut())) {
+        	reponse.put("Message", "L'annulation est impossible, le delai d'annulation autorise est depasse");
+            return Response.status(Response.Status.BAD_REQUEST).entity(reponse).build();
         }
 
-        res.setStatus("annellee");
-        Map<String,String> response = new HashMap<>();
-        response.put("Message", "Rservation annulee");
-        return Response.ok().entity(response).build();
+        reservation.setStatus("annellee");
+        reponse.put("Message", "Reservation annulee");
+        return Response.ok().entity(reponse).build();
     }
 }
