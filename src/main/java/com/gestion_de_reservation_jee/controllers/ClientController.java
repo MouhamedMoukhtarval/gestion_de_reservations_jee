@@ -6,7 +6,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import com.gestion_de_reservation_jee.logique.LogiqueReservation;
@@ -31,36 +33,36 @@ public class ClientController {
         return Response.ok(StockageDonnees.salles.values()).build();
     }
 
-    @POST
+
+	@POST
     @Path("/reserver")
     public Response creerReservation(@HeaderParam("utilisateur") String nomUtilisateur, @HeaderParam("motDePasse") String motDePasse, Reservation requete) {
-        if (!estClientAuthentifie(nomUtilisateur, motDePasse)) {
+    	if (!estClientAuthentifie(nomUtilisateur, motDePasse)) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
 
-        Salle salle = StockageDonnees.salles.get(requete.getRoomId());
+        Salle salle = StockageDonnees.salles.get(requete.getSalleId());
         if (salle == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
 
-        if (!LogiqueReservation.estDureeValide(requete.getDurationHours())) {
+        if (!LogiqueReservation.estDureeValide(requete.getDureeHeurs())) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Testing duree").build();
+        }
+
+        if (requete.getDateDebut().isBefore(LocalDateTime.now())) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
 
-        if (requete.getStartTime().isBefore(LocalDateTime.now())) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
-
-        if (!LogiqueReservation.estSalleDisponible(requete.getRoomId(), requete.getStartTime(), requete.getDurationHours())) {
+        if (!LogiqueReservation.estSalleDisponible(requete.getSalleId(), requete.getDateDebut(), requete.getDureeHeurs())) {
             return Response.status(Response.Status.CONFLICT).build();
         }
 
-        double total = salle.getPrixParHeur() * requete.getDurationHours();
-        
-        requete.setId(UUID.randomUUID().toString().substring(0, 8));
-        requete.setClientUsername(nomUtilisateur);
-        requete.setTotalCost(total);
-        requete.setStatus("EN_ATTENTE");
+        double total = salle.getPrixParHeur() * requete.getDureeHeurs();
+        requete.setId(UUID.randomUUID().toString().substring(0, 5));
+        requete.setNomClient(nomUtilisateur);
+        requete.setCoutTotal(total);
+        requete.setStatus("en_attente");
 
         StockageDonnees.reservations.put(requete.getId(), requete);
         return Response.status(Response.Status.CREATED).entity(requete).build();
@@ -74,9 +76,9 @@ public class ClientController {
         }
         
         List<Reservation> mesReservations = new ArrayList<>();
-        for (Reservation r : StockageDonnees.reservations.values()) {
-            if (r.getClientUsername().equals(nomUtilisateur)) {
-                mesReservations.add(r);
+        for (Reservation reservation : StockageDonnees.reservations.values()) {
+            if (reservation.getNomClient().equals(nomUtilisateur)) {
+                mesReservations.add(reservation);
             }
         }
         return Response.ok(mesReservations).build();
@@ -90,15 +92,17 @@ public class ClientController {
         }
 
         Reservation res = StockageDonnees.reservations.get(id);
-        if (res == null || !res.getClientUsername().equals(nomUtilisateur)) {
+        if (res == null || !res.getNomClient().equals(nomUtilisateur)) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
 
-        if (!LogiqueReservation.peutAnnuler(res.getStartTime())) {
+        if (!LogiqueReservation.peutAnnuler(res.getDateDebut())) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
 
         res.setStatus("annellee");
-        return Response.ok().build();
+        Map<String,String> response = new HashMap<>();
+        response.put("Message", "Rservation annulee");
+        return Response.ok().entity(response).build();
     }
 }

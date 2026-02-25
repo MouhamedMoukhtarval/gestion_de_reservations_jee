@@ -4,6 +4,7 @@ import java.util.List;
 
 public class Salle {
 	private String id;
+	private String idUtilisateur;
     private String nom;
     private int capacite; 
     private String type; 
@@ -13,8 +14,9 @@ public class Salle {
     
     public Salle() {}
     
-    public Salle(String id,String nom,int capacite,String type,double prixParHeur,String location,List<String> equipments) {
+    public Salle(String id,String idUtili,String nom,int capacite,String type,double prixParHeur,String location,List<String> equipments) {
          this.id=id;
+         this.idUtilisateur=idUtili;
          this.nom=nom;
          this.capacite=capacite;
          this.type=type;
@@ -22,7 +24,8 @@ public class Salle {
          this.location=location;
          this.equipments=equipments;
     }
-    
+    public String getIdUtili() {return idUtilisateur;}
+    public void setIdUtili(String idUtili) {this.idUtilisateur=idUtili;}
     public void setId(String id) {
     	this.id=id;
     }

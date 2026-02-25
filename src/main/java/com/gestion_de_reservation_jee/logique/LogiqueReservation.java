@@ -19,9 +19,9 @@ public class LogiqueReservation {
     public static boolean estSalleDisponible(String idSalle, LocalDateTime debut, int heures) {
         LocalDateTime fin = debut.plusHours(heures);
         for (Reservation res : StockageDonnees.reservations.values()) {
-            if (res.getRoomId().equals(idSalle) && !"ANNULEE".equals(res.getStatus())) {
-                LocalDateTime finRes = res.getStartTime().plusHours(res.getDurationHours());
-                if (debut.isBefore(finRes) && fin.isAfter(res.getStartTime())) {
+            if (res.getSalleId().equals(idSalle) && !"annullee".equals(res.getStatut())) {
+                LocalDateTime finRes = res.getDateDebut().plusHours(res.getDureeHeurs());
+                if (debut.isBefore(finRes) && fin.isAfter(res.getDateDebut())) {
                     return false;
                 }
             }
