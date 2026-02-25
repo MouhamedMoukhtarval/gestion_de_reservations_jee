@@ -38,7 +38,10 @@ public class AdminController {
 
         if(!validerAdmin(user, password)) return Response.status(401).entity(reponse).build();
         reponse.put("Message", "Salle n'existe pas,ne peut etre assigner!");
-        if(!StockageDonnees.salles.containsKey(newUser.getSallesIds().getFirst())) return Response.status(404).entity(reponse).build();
+        if(newUser.getSallesIds() != null) {
+        	 if(!StockageDonnees.salles.containsKey(newUser.getSallesIds().getFirst())) return Response.status(404).entity(reponse).build();
+        }
+       
         
 
         StockageDonnees.users.put(newUser.getUsername(), newUser);

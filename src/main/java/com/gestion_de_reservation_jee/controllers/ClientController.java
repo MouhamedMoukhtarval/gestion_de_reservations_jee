@@ -56,7 +56,7 @@ public class ClientController {
             return Response.status(Response.Status.BAD_REQUEST).entity(reponse).build();
         }
 
-        if (reservation.getDateDebut().isAfter(LocalDateTime.now())) {
+        if (reservation.getDateDebut().isBefore(LocalDateTime.now())) {
         	
         	reponse.put("Message", "Le reservation devrait avoir lieu apres maintenant!.");
             return Response.status(Response.Status.BAD_REQUEST).entity(reponse).build();
